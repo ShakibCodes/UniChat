@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Chat</title>
     <style>
         /* Chat UI Style */
 .chat-container {
@@ -27,6 +27,7 @@
 }
 
 .exit-link {
+  cursor: pointer; 
   color: #ff3b30;
   background: none;
   border: none;
@@ -106,12 +107,16 @@
   align-items: center;
   justify-content: center;
 }
+.exitt {
+  cursor: pointer; /* This creates the finger/hand icon */
+  text-decoration: none; /* Removes any default underline from the link */
+}
     </style>
 </head>
 <body>
     <div class="chat-container">
   <header class="chat-header">
-    <button class="exit-link">Exit</button>
+    <a class="exitt" href="/"><button class="exit-link" >Exit</button></a>
     <div class="status-indicator">Global Room</div>
     <div style="width: 40px;"></div> </header>
 
@@ -132,38 +137,57 @@
 </div>
 </body>
 <script>
-    // Create the WebSocket connection
-    const chatSocket = new WebSocket(
-        'ws://' + window.location.host + '/ws/chat/'
-    );
+    // 1. Generate a random ID for this session so the browser knows who it is
+const senderId = Math.random().toString(36).substring(2, 15);
 
-    const input = document.querySelector('.main-input');
-    const sendBtn = document.querySelector('.send-icon-btn');
-    const stream = document.querySelector('.message-stream');
+const chatSocket = new WebSocket(
+    'ws://' + window.location.host + '/ws/chat/'
+);
 
-    // When a message is received from the server
-    chatSocket.onmessage = function(e) {
-        const data = JSON.parse(e.data);
-        createBubble(data.message, false); // Add bubble to screen
-    };
+const input = document.querySelector('.main-input');
+const sendBtn = document.querySelector('.send-icon-btn');
+const stream = document.querySelector('.message-stream');
 
-    function createBubble(text, isSent) {
-        const bubble = document.createElement('div');
-        bubble.className = `bubble ${isSent ? 'sent' : 'received'}`;
-        bubble.textContent = text;
-        stream.appendChild(bubble);
-        stream.scrollTop = stream.scrollHeight;
+// 2. When a message is received from the server
+chatSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    
+    // Only show the message if it's NOT from us (because we already added ours locally)
+    if (data.sender_id !== senderId) {
+        createBubble(data.message, false); 
     }
+};
 
-    sendBtn.onclick = () => {
-        const message = input.value;
-        if(message.trim() !== "") {
-            // Send the message to the server via WebSocket
-            chatSocket.send(JSON.stringify({
-                'message': message
-            }));
-            input.value = "";
-        }
-    };
+function createBubble(text, isSent) {
+    const bubble = document.createElement('div');
+    bubble.className = `bubble ${isSent ? 'sent' : 'received'}`;
+    bubble.textContent = text;
+    stream.appendChild(bubble);
+    stream.scrollTop = stream.scrollHeight;
+}
+
+function handleSend() {
+    const message = input.value;
+    if(message.trim() !== "") {
+        // 3. Immediately show the message on our screen on the right (sent style)
+        createBubble(message, true); 
+
+        // 4. Send the message PLUS our unique senderId
+        chatSocket.send(JSON.stringify({
+            'message': message,
+            'sender_id': senderId 
+        }));
+        input.value = "";
+    }
+}
+
+sendBtn.onclick = handleSend;
+
+input.addEventListener("keypress", function(event) {
+    if (event.key === "Enter") {
+        event.preventDefault(); 
+        handleSend();
+    }
+});
 </script>
 </html>
