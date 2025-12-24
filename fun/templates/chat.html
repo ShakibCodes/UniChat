@@ -162,7 +162,6 @@
             chatSocket.send(JSON.stringify({
                 'message': message
             }));
-            createBubble(message, true); // Locally show your own message
             input.value = "";
         }
     };
